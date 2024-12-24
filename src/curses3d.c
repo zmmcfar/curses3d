@@ -4,23 +4,46 @@
 #include <time.h>
 #include <unistd.h>
 
-void draw_line(int y0, int x0, int y1, int x1) {
+
+struct Point {
+	float y;
+	float x;
+};
+
+void display_point(struct Point p) {
+	mvaddch(round(p.y), round(p.x), ' '|A_REVERSE);
+}
+
+void erase_point(struct Point p) {
+	mvaddch(round(p.y), round(p.x), ' ');
+}
+
+void draw_line(struct Point p0, struct Point p1, int erase) {
 	/* Implementation of Bresenham's line-drawing algorithm */
-	int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-	int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+	int dx = abs(p1.x - p0.x), sx = p0.x < p1.x ? 1 : -1;
+	int dy = -abs(p1.y - p0.y), sy = p0.y < p1.y ? 1 : -1;
 	int err = dx + dy, e2;
 
 	for(;;) {
-		mvaddch(y0, x0, ' '|A_REVERSE);
-		if(x0 == x1 && y0 == y1) break;
+		if(erase == 0) {
+			display_point(p0);
+		} else {
+			erase_point(p0);
+		}
+		if(p0.x == p1.x && p0.y == p1.y) break;
 		e2 = 2 * err;
-		if(e2 >= dy) { err += dy; x0 += sx; }
-		if(e2 <= dx) { err += dx; y0 += sy; }
+		if(e2 >= dy) { err += dy; p0.x += sx; }
+		if(e2 <= dx) { err += dx; p0.y += sy; }
 	}
 }
 
-
-
+struct Point rotate_point(struct Point p0, float theta_an) {
+	struct Point p1;
+	p1.x = (p0.x * cos(theta_an)) - (p0.y * sin(theta_an));
+	p1.y = (p0.x * sin(theta_an)) + (p0.y * cos(theta_an));
+	
+	return p1;
+}
 
 int main() {
 	initscr();
@@ -35,60 +58,29 @@ int main() {
 	getmaxyx(stdscr, y_max, x_max);
 	int y_mid = round(y_max / 2);
 	int x_mid = round(x_max / 2);
+	
+	struct Point p1;
+	p1.x = x_mid - 10;
+	p1.y = y_mid - 10;
+	
+	struct Point midpoint;
+	midpoint.x = x_mid;
+	midpoint.y = y_mid;
 
-	int scale = 15;
-	float p1[] = {y_mid - scale, x_mid - scale};
-	int p2[] = {y_mid - scale, x_mid + scale};
-	int p3[] = {y_mid + scale, x_mid - scale};
-	int p4[] = {y_mid + scale, x_mid + scale};
-
-	float angle = 0.05;
-	float st = sin(angle);
-	float ct = cos(angle);
-	int p1_initialy = y_mid - scale;
-	int p1_initialx = x_mid - scale;
+	float theta_angle = 0.15;
 	do {
-		/*
-		draw_line(p1[0], p1[1], p2[0], p2[1]);
-		draw_line(p1[0], p1[1], p3[0], p3[1]);
-		draw_line(p2[0], p2[1], p4[0], p4[1]);
-		draw_line(p3[0], p3[1], p4[0], p4[1]);
-		*/
-		mvaddch(p1[0], p1[1], '1');
-		/*
-		mvaddch(p2[0], p2[1], '2');
-		mvaddch(p3[0], p3[1], '3');
-		mvaddch(p4[0], p4[1], '4');
-		*/
-
-		mvaddch(0, 0, 'a');
-		p1[0] = (p1[0] - p1_initialy) + 3;
-		p1[1] = (p1[1] - p1_initialx) + 3;
-		p1[0] = (p1[1] * st) + (p1[0] * ct);
-		p1[1] = (p1[1] * ct) - (p1[0] * st);
-		p1[0] = p1[0] + p1_initialy - 3;
-		p1[1] = p1[1] + p1_initialx - 3;
-		mvprintw(1, 0, "p1[0] is now %4.3f", p1[0]);
-		mvprintw(2, 0, "p1[1] is now %4.3f", p1[1]);
-
-		/*
-		mvaddch(0, 0, 'b');
-		p2[0] = round((p2[1] * st) + (p2[0] * ct));
-		p2[1] = round((p2[1] * ct) - (p2[0] * st));
-
-		mvaddch(0, 0, 'c');
-		p3[0] = round((p3[1] * st) + (p3[0] * ct));
-		p3[1] = round((p3[1] * ct) - (p3[0] * st));
-
-		mvaddch(0, 0, 'd');
-		p4[0] = round((p4[1] * st) + (p4[0] * ct));
-		p4[1] = round((p4[1] * ct) - (p4[0] * st));
-		*/
-		mvprintw(0, 0, "Refreshing");
+		draw_line(p1, midpoint, 0);
 		refresh();
-		usleep(90000);
+		draw_line(p1, midpoint, 1);
 
+		p1.x = p1.x - x_mid;
+		p1.y = p1.y - y_mid;
+		p1 = rotate_point(p1, theta_angle);
+		p1.x = round(p1.x) + x_mid;
+		p1.y = round(p1.y) + y_mid;
+		usleep(20000);
 	} while(1);
+
 	endwin();
 
 	return 0;
